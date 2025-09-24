@@ -5,8 +5,8 @@
 <title>Calculateur d'heures</title>
 <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .container { background-color: #ffffff; padding: 30px 40px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; max-width: 500px; width: 95%; }
-    h1 { color: #333333; margin-bottom: 20px; }
+    .container { background-color: #ffffff; padding: 30px 40px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; max-width: 600px; width: 96%; }
+    h1 { color: #333333; margin-bottom: 20px; font-size: 20px; }
     input[type="date"] { padding: 8px; width: 80%; margin-top: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #ccc; }
     button { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 5px; }
     button:hover { background-color: #45a049; }
@@ -25,7 +25,7 @@
         text-align: left; 
         outline: none; 
         font-size: 16px; 
-        transition: 0.4s; 
+        transition: 0.2s; 
         margin-top: 20px; 
     }
     .active, .accordion:hover { background-color: #222; } /* gris foncé au survol ou actif */
@@ -40,22 +40,32 @@
         border: 1px solid #ccc; 
         max-height: 300px; /* scroll si trop long */
     }
-    .dates-list { font-size: 14px; line-height: 1.6; }
+    .dates-list { font-size: 14px; line-height: 1.6; white-space: nowrap; }
+    /* Masquer le menu détails au départ */
+    #menu-details { display: none; }
+    /* style pour tableau alternatif (optionnel) */
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .mini-table td { padding: 4px 6px; border-bottom: 1px solid #eee; }
+    .mini-table .date { width: 40%; }
+    .mini-table .cachets { width: 30%; text-align: right; }
+    .mini-table .heures { width: 30%; text-align: right; }
 </style>
 </head>
 <body>
 <div class="container">
     <h1>Calculateur d’heures avant 0h – suppression des cachets ActeursPros</h1>
     <label for="date_depart">Date d’ajout des cachets ActeursPros sur France Travail</label><br>
-    <input type="date" id="date_depart"><br>
-    <button onclick="calculer()">Calculer</button>
-    <button onclick="reinitialiser()">Réinitialiser</button>
-    <p id="resultat"></p>
+    <input type="date" id="date_depart" aria-label="Date d'ajout"><br>
+    <button id="btn-calcul">Calculer</button>
+    <button id="btn-reset">Réinitialiser</button>
+    <p id="resultat" aria-live="polite"></p>
 
-    <!-- Nouveau menu déroulant -->
-    <button class="accordion">Détails précis des dates</button>
-    <div class="panel">
-        <div id="detailsDates" class="dates-list"></div>
+    <!-- Nouveau menu déroulant (caché au départ) -->
+    <div id="menu-details">
+        <button class="accordion">Détails précis des dates</button>
+        <div class="panel">
+            <div id="detailsDates" class="dates-list"></div>
+        </div>
     </div>
 
     <!-- Ancien menu déroulant -->
@@ -68,67 +78,114 @@
 </div>
 
 <script>
-function calculer() {
-    const heuresInitiales = 338;
-    const heuresParCachet = 12;
-    const periodeJours = 3;
-    const totalCachets = Math.floor(heuresInitiales / heuresParCachet);
-    const joursTotaux = totalCachets * periodeJours;
+(function() {
+    // Constantes de calcul
+    const HEURES_INITIALES = 338;
+    const HEURES_PAR_CACHET = 12;
+    const PERIODE_JOURS = 3;
 
-    const dateDepartInput = document.getElementById('date_depart').value;
-    if (!dateDepartInput) {
-        alert("Veuillez entrer une date !");
-        return;
+    const btnCalc = document.getElementById('btn-calcul');
+    const btnReset = document.getElementById('btn-reset');
+    const inputDate = document.getElementById('date_depart');
+    const resultat = document.getElementById('resultat');
+    const detailsDatesDiv = document.getElementById('detailsDates');
+    const menuDetails = document.getElementById('menu-details');
+
+    // Formatage de date en français
+    function formatDate(d) {
+        return d.toLocaleDateString('fr-FR');
     }
 
-    const dateDepart = new Date(dateDepartInput);
-    const dateFinale = new Date(dateDepart);
-    dateFinale.setDate(dateFinale.getDate() + joursTotaux);
-
-    // Affichage résultat principal
-    document.getElementById('resultat').innerHTML = 
-        `Nombre de jours avant 0h : <b>${joursTotaux}</b> jours<br>
-         Date à laquelle tu atteindras 0h : <b>${dateFinale.toLocaleDateString()}</b>`;
-
-    // Génération du détail jour par jour
-    let details = "";
-    let cachetsRestants = totalCachets;
-    let heuresRestantes = heuresInitiales;
-
-    for (let i = 0; i <= joursTotaux; i++) {
-        const currentDate = new Date(dateDepart);
-        currentDate.setDate(currentDate.getDate() + i);
-
-        if (i !== 0 && i % periodeJours === 0 && cachetsRestants > 0) {
-            cachetsRestants -= 1;
-            heuresRestantes -= heuresParCachet;
+    function calculer() {
+        const dateDepartInput = inputDate.value;
+        if (!dateDepartInput) {
+            alert("Veuillez entrer une date !");
+            return;
         }
 
-        details += `${currentDate.toLocaleDateString()} → ${cachetsRestants} cachets – ${heuresRestantes}h<br>`;
+        // On calcule le nombre de périodes (on arrondit vers le haut pour inclure la partie finale)
+        const periodesNecessaires = Math.ceil(HEURES_INITIALES / HEURES_PAR_CACHET); // ex: 29
+        const joursTotaux = periodesNecessaires * PERIODE_JOURS; // ex: 29 * 3 = 87
+
+        const dateDepart = new Date(dateDepartInput);
+        const dateFinale = new Date(dateDepart);
+        dateFinale.setDate(dateFinale.getDate() + joursTotaux);
+
+        // Affichage résultat principal
+        resultat.innerHTML = 
+            `Nombre de jours avant 0h : <b>${joursTotaux}</b> jours<br>
+             Date à laquelle tu atteindras 0h : <b>${formatDate(dateFinale)}</b>`;
+
+        // Génération du détail jour par jour
+        let detailsHTML = '<table class="mini-table">';
+        // En-tête optionnel
+        detailsHTML += '<tbody>';
+        for (let i = 0; i <= joursTotaux; i++) {
+            const currentDate = new Date(dateDepart);
+            currentDate.setDate(currentDate.getDate() + i);
+
+            // nombre de suppressions effectuées jusqu'à ce jour (1 suppression tous les PERIODE_JOURS)
+            const suppressions = Math.floor(i / PERIODE_JOURS);
+            let heuresRestantes = HEURES_INITIALES - (suppressions * HEURES_PAR_CACHET);
+            if (heuresRestantes < 0) heuresRestantes = 0;
+
+            // cachets restants entiers (nombre de cachets complets)
+            const cachetsRestants = Math.floor(heuresRestantes / HEURES_PAR_CACHET);
+
+            detailsHTML +=
+                `<tr>
+                    <td class="date">${formatDate(currentDate)}</td>
+                    <td class="cachets">${cachetsRestants} cachet${cachetsRestants > 1 ? 's' : ''}</td>
+                    <td class="heures">${heuresRestantes}h</td>
+                </tr>`;
+        }
+        detailsHTML += '</tbody></table>';
+
+        detailsDatesDiv.innerHTML = detailsHTML;
+
+        // Affiche le menu détails une fois calculé
+        menuDetails.style.display = 'block';
+
+        // Optionnel : ouvrir automatiquement la section détails pour que l'utilisateur voit immédiatement
+        // Trouvons le panel suivant le bouton "Détails précis des dates"
+        const detailsButton = menuDetails.querySelector('.accordion');
+        const detailsPanel = detailsButton ? detailsButton.nextElementSibling : null;
+        if (detailsPanel) {
+            detailsPanel.style.display = 'block';
+            detailsButton.classList.add('active');
+        }
     }
 
-    document.getElementById('detailsDates').innerHTML = details;
-}
+    function reinitialiser() {
+        inputDate.value = "";
+        resultat.innerHTML = "";
+        detailsDatesDiv.innerHTML = "";
+        menuDetails.style.display = "none";
+        // fermer tous les panels
+        const panels = document.querySelectorAll('.panel');
+        panels.forEach(p => p.style.display = 'none');
+        const accs = document.querySelectorAll('.accordion');
+        accs.forEach(a => a.classList.remove('active'));
+    }
 
-function reinitialiser() {
-    document.getElementById('date_depart').value = "";
-    document.getElementById('resultat').innerHTML = "";
-    document.getElementById('detailsDates').innerHTML = "";
-}
-
-// Script pour les accordéons
-const acc = document.getElementsByClassName("accordion");
-for (let i = 0; i < acc.length; i++) {
-    acc[i].addEventListener("click", function() {
-        this.classList.toggle("active");
-        const panel = this.nextElementSibling;
-        if (panel.style.display === "block") {
-            panel.style.display = "none";
-        } else {
-            panel.style.display = "block";
+    // Délégation d'événements pour les accordéons (robuste même si éléments masqués au départ)
+    document.querySelector('.container').addEventListener('click', function(e) {
+        const target = e.target;
+        if (target.classList && target.classList.contains('accordion')) {
+            const panel = target.nextElementSibling;
+            if (!panel) return;
+            const isOpen = panel.style.display === 'block';
+            // fermer tous les panels si on veut comportement accordéon exclusif (optionnel) - ici on laisse ouvert/fermé indépendants
+            panel.style.display = isOpen ? 'none' : 'block';
+            target.classList.toggle('active', !isOpen);
         }
     });
-}
+
+    // Attacher handlers boutons
+    btnCalc.addEventListener('click', calculer);
+    btnReset.addEventListener('click', reinitialiser);
+
+})();
 </script>
 </body>
 </html>
