@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Calculateur d'heures</title>
+<style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .container { background-color: #ffffff; padding: 30px 40px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; max-width: 400px; width: 90%; }
+    h1 { color: #333333; margin-bottom: 20px; }
+    input[type="date"] { padding: 8px; width: 80%; margin-top: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #ccc; }
+    button { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 5px; }
+    button:hover { background-color: #45a049; }
+    p { margin-top: 20px; font-size: 16px; color: #333; }
+    b { color: #1a73e8; }
+    /* Styles pour la boîte déroulante */
+    .accordion { background-color: #eee; cursor: pointer; padding: 15px; width: 100%; border: none; border-radius: 8px; text-align: left; outline: none; font-size: 16px; transition: 0.4s; margin-top: 20px; }
+    .active, .accordion:hover { background-color: #ddd; }
+    .panel { padding: 0 15px; display: none; background-color: white; overflow: hidden; text-align: left; margin-top: 5px; border-radius: 8px; border: 1px solid #ccc; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Calculateur d’heures avant 0h – suppression des cachets ActeursPros</h1>
+    <label for="date_depart">Date d’ajout des cachets ActeursPros sur France Travail</label><br>
+    <input type="date" id="date_depart"><br>
+    <button onclick="calculer()">Calculer</button>
+    <button onclick="reinitialiser()">Réinitialiser</button>
+    <p id="resultat"></p>
+
+    <!-- Boîte déroulante -->
+    <button class="accordion">Informations sur le fonctionnement des cachets ActeursPros</button>
+    <div class="panel">
+        <p>
+        Une fois que les cachets ActeursPros sont ajoutés dans France Travail, les heures correspondantes (338 heures) sont progressivement supprimées sur une période de 87 jours. La suppression se fait à raison d’un cachet tous les 3 jours, sachant qu’un cachet équivaut à 12 heures, soit 3 jours de cours chez ActeursPros. Cette opération est déclenchée parce que la date anniversaire a été atteinte, les heures concernées correspondant au 2ᵉ niveau (celles de l’année précédente). Le décompte commence dès l’ajout des heures ActeursPros dans France Travail, scène et image.
+        </p>
+    </div>
+</div>
+
+<script>
+function calculer() {
+    const heuresInitiales = 338;
+    const perteParPeriode = 12;
+    const periodeJours = 3;
+
+    const dateDepartInput = document.getElementById('date_depart').value;
+    if (!dateDepartInput) {
+        alert("Veuillez entrer une date !");
+        return;
+    }
+
+    const dateDepart = new Date(dateDepartInput);
+    const nombrePeriodes = Math.ceil(heuresInitiales / perteParPeriode);
+    const nombreJours = nombrePeriodes * periodeJours;
+
+    const dateFinale = new Date(dateDepart);
+    dateFinale.setDate(dateFinale.getDate() + nombreJours);
+
+    document.getElementById('resultat').innerHTML = 
+        `Nombre de jours avant 0h : <b>${nombreJours}</b> jours<br>
+         Date à laquelle tu atteindras 0h : <b>${dateFinale.toLocaleDateString()}</b>`;
+}
+
+function reinitialiser() {
+    document.getElementById('date_depart').value = "";
+    document.getElementById('resultat').innerHTML = "";
+}
+
+// Script pour l'accordéon
+const acc = document.getElementsByClassName("accordion");
+for (let i = 0; i < acc.length; i++) {
+    acc[i].addEventListener("click", function() {
+        this.classList.toggle("active");
+        const panel = this.nextElementSibling;
+        if (panel.style.display === "block") {
+            panel.style.display = "none";
+        } else {
+            panel.style.display = "block";
+        }
+    });
+}
+</script>
+</body>
+</html>
