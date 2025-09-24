@@ -12,10 +12,33 @@
     button:hover { background-color: #45a049; }
     p { margin-top: 20px; font-size: 16px; color: #333; }
     b { color: #1a73e8; }
+
     /* Styles pour la boîte déroulante */
-    .accordion { background-color: #eee; cursor: pointer; padding: 15px; width: 100%; border: none; border-radius: 8px; text-align: left; outline: none; font-size: 16px; transition: 0.4s; margin-top: 20px; }
-    .active, .accordion:hover { background-color: #ddd; }
-    .panel { padding: 0 15px; display: none; background-color: white; overflow: hidden; text-align: left; margin-top: 5px; border-radius: 8px; border: 1px solid #ccc; }
+    .accordion { 
+        background-color: #000; /* fond noir */
+        color: #fff; /* texte blanc */
+        cursor: pointer; 
+        padding: 15px; 
+        width: 100%; 
+        border: none; 
+        border-radius: 8px; 
+        text-align: left; 
+        outline: none; 
+        font-size: 16px; 
+        transition: 0.4s; 
+        margin-top: 20px; 
+    }
+    .active, .accordion:hover { background-color: #222; } /* gris foncé au survol ou actif */
+    .panel { 
+        padding: 0 15px; 
+        display: none; 
+        background-color: white; 
+        overflow: hidden; 
+        text-align: left; 
+        margin-top: 5px; 
+        border-radius: 8px; 
+        border: 1px solid #ccc; 
+    }
 </style>
 </head>
 <body>
