@@ -41,8 +41,6 @@
         max-height: 300px; /* scroll si trop long */
     }
     .dates-list { font-size: 14px; line-height: 1.6; }
-    /* Masquer le menu détails au départ */
-    #menu-details { display: none; }
 </style>
 </head>
 <body>
@@ -54,16 +52,83 @@
     <button onclick="reinitialiser()">Réinitialiser</button>
     <p id="resultat"></p>
 
-    <!-- Nouveau menu déroulant (caché au départ) -->
-    <div id="menu-details">
-        <button class="accordion">Détails précis des dates</button>
-        <div class="panel">
-            <div id="detailsDates" class="dates-list"></div>
-        </div>
+    <!-- Nouveau menu déroulant -->
+    <button class="accordion">Détails précis des dates</button>
+    <div class="panel">
+        <div id="detailsDates" class="dates-list"></div>
     </div>
 
     <!-- Ancien menu déroulant -->
     <button class="accordion">Informations sur le fonctionnement des cachets ActeursPros</button>
     <div class="panel">
         <p>
-        Une fois que les cachets ActeursPros sont ajoutés dans France Travail, les heures correspondantes (338 h
+        Une fois que les cachets ActeursPros sont ajoutés dans France Travail, les heures correspondantes (338 heures) sont progressivement supprimées sur une période de 87 jours. La suppression se fait à raison d’un cachet tous les 3 jours, sachant qu’un cachet équivaut à 12 heures, soit 3 jours de cours chez ActeursPros. Cette opération est déclenchée parce que la date anniversaire a été atteinte, les heures concernées correspondant au 2ᵉ niveau (celles de l’année précédente). Le décompte commence dès l’ajout des heures ActeursPros dans France Travail, scène et image.
+        </p>
+    </div>
+</div>
+
+<script>
+function calculer() {
+    const heuresInitiales = 338;
+    const heuresParCachet = 12;
+    const periodeJours = 3;
+    const totalCachets = Math.floor(heuresInitiales / heuresParCachet);
+    const joursTotaux = totalCachets * periodeJours;
+
+    const dateDepartInput = document.getElementById('date_depart').value;
+    if (!dateDepartInput) {
+        alert("Veuillez entrer une date !");
+        return;
+    }
+
+    const dateDepart = new Date(dateDepartInput);
+    const dateFinale = new Date(dateDepart);
+    dateFinale.setDate(dateFinale.getDate() + joursTotaux);
+
+    // Affichage résultat principal
+    document.getElementById('resultat').innerHTML = 
+        `Nombre de jours avant 0h : <b>${joursTotaux}</b> jours<br>
+         Date à laquelle tu atteindras 0h : <b>${dateFinale.toLocaleDateString()}</b>`;
+
+    // Génération du détail jour par jour
+    let details = "";
+    let cachetsRestants = totalCachets;
+    let heuresRestantes = heuresInitiales;
+
+    for (let i = 0; i <= joursTotaux; i++) {
+        const currentDate = new Date(dateDepart);
+        currentDate.setDate(currentDate.getDate() + i);
+
+        if (i !== 0 && i % periodeJours === 0 && cachetsRestants > 0) {
+            cachetsRestants -= 1;
+            heuresRestantes -= heuresParCachet;
+        }
+
+        details += `${currentDate.toLocaleDateString()} → ${cachetsRestants} cachets – ${heuresRestantes}h<br>`;
+    }
+
+    document.getElementById('detailsDates').innerHTML = details;
+}
+
+function reinitialiser() {
+    document.getElementById('date_depart').value = "";
+    document.getElementById('resultat').innerHTML = "";
+    document.getElementById('detailsDates').innerHTML = "";
+}
+
+// Script pour les accordéons
+const acc = document.getElementsByClassName("accordion");
+for (let i = 0; i < acc.length; i++) {
+    acc[i].addEventListener("click", function() {
+        this.classList.toggle("active");
+        const panel = this.nextElementSibling;
+        if (panel.style.display === "block") {
+            panel.style.display = "none";
+        } else {
+            panel.style.display = "block";
+        }
+    });
+}
+</script>
+</body>
+</html>
