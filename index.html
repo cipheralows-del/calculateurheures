@@ -13,10 +13,9 @@
     p { margin-top: 20px; font-size: 16px; color: #333; }
     b { color: #1a73e8; }
 
-    /* Styles pour la boîte déroulante */
     .accordion { 
-        background-color: #000; /* fond noir */
-        color: #fff; /* texte blanc */
+        background-color: #000; 
+        color: #fff; 
         cursor: pointer; 
         padding: 15px; 
         width: 100%; 
@@ -28,7 +27,7 @@
         transition: 0.2s; 
         margin-top: 20px; 
     }
-    .active, .accordion:hover { background-color: #222; } /* gris foncé au survol ou actif */
+    .active, .accordion:hover { background-color: #222; } 
     .panel { 
         padding: 10px 15px; 
         display: none; 
@@ -38,12 +37,10 @@
         margin-top: 5px; 
         border-radius: 8px; 
         border: 1px solid #ccc; 
-        max-height: 300px; /* scroll si trop long */
+        max-height: 300px; 
     }
     .dates-list { font-size: 14px; line-height: 1.6; white-space: nowrap; }
-    /* Masquer le menu détails au départ */
     #menu-details { display: none; }
-    /* style pour tableau alternatif (optionnel) */
     .mini-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .mini-table td { padding: 4px 6px; border-bottom: 1px solid #eee; }
     .mini-table .date { width: 40%; }
@@ -60,7 +57,7 @@
     <button id="btn-reset">Réinitialiser</button>
     <p id="resultat" aria-live="polite"></p>
 
-    <!-- Nouveau menu déroulant (caché au départ) -->
+    <!-- Nouveau menu déroulant -->
     <div id="menu-details">
         <button class="accordion">Détails précis des dates</button>
         <div class="panel">
@@ -68,21 +65,23 @@
         </div>
     </div>
 
-    <!-- Ancien menu déroulant -->
+    <!-- Menu informations mis à jour -->
     <button class="accordion">Informations sur le fonctionnement des cachets ActeursPros</button>
     <div class="panel">
         <p>
-        Une fois que les cachets ActeursPros sont ajoutés dans France Travail, les heures correspondantes (338 heures) sont progressivement supprimées sur une période de 87 jours. La suppression se fait à raison d’un cachet tous les 3 jours, sachant qu’un cachet équivaut à 12 heures, soit 3 jours de cours chez ActeursPros. Cette opération est déclenchée parce que la date anniversaire a été atteinte, les heures concernées correspondant au 2ᵉ niveau (celles de l’année précédente). Le décompte commence dès l’ajout des heures ActeursPros dans France Travail, scène et image.
+        Les cachets ActeursPros ajoutés dans France Travail correspondent à <b>338 heures de cours (28 cachets)</b>. La suppression des cachets commence le <b>10 décembre 2025</b>, car France Travail calcule les heures à reculons à partir du <b>27 juin 2025</b>, dernier jour de cours de la 2ᵉ année.  
+        France Travail ne peut pas convertir plus de <b>338 heures de formation</b> en cachets.  
+        La suppression se fait ensuite progressivement à raison de <b>1 cachet tous les 3 jours</b>, chaque cachet correspondant à <b>12 heures</b> (en tenant compte qu’<b>1 jour d’ActeursPros en 2ᵉ année = 4h</b>). Ce processus continue jusqu’à ce que le nombre de cachets atteigne zéro.
         </p>
     </div>
 </div>
 
 <script>
 (function() {
-    // Constantes de calcul
     const HEURES_INITIALES = 338;
     const HEURES_PAR_CACHET = 12;
     const PERIODE_JOURS = 3;
+    const DATE_DEBUT_SUPPRESSION = new Date('2025-12-10');
 
     const btnCalc = document.getElementById('btn-calcul');
     const btnReset = document.getElementById('btn-reset');
@@ -91,65 +90,68 @@
     const detailsDatesDiv = document.getElementById('detailsDates');
     const menuDetails = document.getElementById('menu-details');
 
-    // Formatage de date en français
-    function formatDate(d) {
-        return d.toLocaleDateString('fr-FR');
-    }
+    function formatDate(d) { return d.toLocaleDateString('fr-FR'); }
 
     function calculer() {
-        const dateDepartInput = inputDate.value;
-        if (!dateDepartInput) {
-            alert("Veuillez entrer une date !");
+        const dateDepart = new Date(inputDate.value);
+        if (!inputDate.value) { alert("Veuillez entrer une date !"); return; }
+
+        // Cas avant le 10 décembre 2025
+        if (dateDepart < DATE_DEBUT_SUPPRESSION) {
+            resultat.innerHTML = `Aucune perte de cachets, la suppression commence à partir du <b>${formatDate(DATE_DEBUT_SUPPRESSION)}</b>.`;
+            detailsDatesDiv.innerHTML = '';
+            menuDetails.style.display = 'block';
             return;
         }
 
-        // On calcule le nombre de périodes (on arrondit vers le haut pour inclure la partie finale)
-        const periodesNecessaires = Math.ceil(HEURES_INITIALES / HEURES_PAR_CACHET); // ex: 29
-        const joursTotaux = periodesNecessaires * PERIODE_JOURS; // ex: 29 * 3 = 87
+        // Nombre de jours écoulés depuis le 10 décembre
+        let joursDepasses = Math.floor((dateDepart - DATE_DEBUT_SUPPRESSION) / (1000*60*60*24));
+        if (joursDepasses < 0) joursDepasses = 0;
 
-        const dateDepart = new Date(dateDepartInput);
+        const periodesNecessaires = Math.ceil(HEURES_INITIALES / HEURES_PAR_CACHET);
+        const joursTotaux = periodesNecessaires * PERIODE_JOURS;
+
+        // Heures et cachets restants à la date saisie
+        const suppressionsDepassees = Math.floor(joursDepasses / PERIODE_JOURS);
+        let heuresRestantes = HEURES_INITIALES - suppressionsDepassees * HEURES_PAR_CACHET;
+        if (heuresRestantes < 0) heuresRestantes = 0;
+        let cachetsRestants = Math.floor(heuresRestantes / HEURES_PAR_CACHET);
+
+        const joursRestants = joursTotaux - suppressionsDepassees * PERIODE_JOURS;
         const dateFinale = new Date(dateDepart);
-        dateFinale.setDate(dateFinale.getDate() + joursTotaux);
+        dateFinale.setDate(dateFinale.getDate() + joursRestants);
 
-        // Affichage résultat principal
-        resultat.innerHTML = 
-            `Nombre de jours avant 0h : <b>${joursTotaux}</b> jours<br>
-             Date à laquelle tu atteindras 0h : <b>${formatDate(dateFinale)}</b>`;
+        resultat.innerHTML = `Nombre de jours avant 0h depuis la date saisie : <b>${joursRestants}</b> jours<br>
+            Date à laquelle tu atteindras 0h : <b>${formatDate(dateFinale)}</b>`;
 
-        // Génération du détail jour par jour
-        let detailsHTML = '<table class="mini-table">';
-        // En-tête optionnel
-        detailsHTML += '<tbody>';
-        for (let i = 0; i <= joursTotaux; i++) {
+        // Génération du tableau jour par jour
+        let html = '<table class="mini-table"><tbody>';
+        let heuresCourantes = heuresRestantes;
+        let cachetsCourants = cachetsRestants;
+
+        for (let i = 0; i < joursRestants; i++) {
             const currentDate = new Date(dateDepart);
             currentDate.setDate(currentDate.getDate() + i);
 
-            // nombre de suppressions effectuées jusqu'à ce jour (1 suppression tous les PERIODE_JOURS)
-            const suppressions = Math.floor(i / PERIODE_JOURS);
-            let heuresRestantes = HEURES_INITIALES - (suppressions * HEURES_PAR_CACHET);
-            if (heuresRestantes < 0) heuresRestantes = 0;
+            if (i !== 0 && i % PERIODE_JOURS === 0 && cachetsCourants > 0) {
+                cachetsCourants -= 1;
+                heuresCourantes -= HEURES_PAR_CACHET;
+                if (heuresCourantes < 0) heuresCourantes = 0;
+            }
 
-            // cachets restants entiers (nombre de cachets complets)
-            const cachetsRestants = Math.floor(heuresRestantes / HEURES_PAR_CACHET);
-
-            detailsHTML +=
-                `<tr>
-                    <td class="date">${formatDate(currentDate)}</td>
-                    <td class="cachets">${cachetsRestants} cachet${cachetsRestants > 1 ? 's' : ''}</td>
-                    <td class="heures">${heuresRestantes}h</td>
-                </tr>`;
+            html += `<tr>
+                        <td class="date">${formatDate(currentDate)}</td>
+                        <td class="cachets">${cachetsCourants} cachet${cachetsCourants>1?'s':''}</td>
+                        <td class="heures">${heuresCourantes}h</td>
+                     </tr>`;
         }
-        detailsHTML += '</tbody></table>';
+        html += '</tbody></table>';
 
-        detailsDatesDiv.innerHTML = detailsHTML;
-
-        // Affiche le menu détails une fois calculé
+        detailsDatesDiv.innerHTML = html;
         menuDetails.style.display = 'block';
 
-        // Optionnel : ouvrir automatiquement la section détails pour que l'utilisateur voit immédiatement
-        // Trouvons le panel suivant le bouton "Détails précis des dates"
         const detailsButton = menuDetails.querySelector('.accordion');
-        const detailsPanel = detailsButton ? detailsButton.nextElementSibling : null;
+        const detailsPanel = detailsButton.nextElementSibling;
         if (detailsPanel) {
             detailsPanel.style.display = 'block';
             detailsButton.classList.add('active');
@@ -161,27 +163,23 @@
         resultat.innerHTML = "";
         detailsDatesDiv.innerHTML = "";
         menuDetails.style.display = "none";
-        // fermer tous les panels
         const panels = document.querySelectorAll('.panel');
         panels.forEach(p => p.style.display = 'none');
         const accs = document.querySelectorAll('.accordion');
         accs.forEach(a => a.classList.remove('active'));
     }
 
-    // Délégation d'événements pour les accordéons (robuste même si éléments masqués au départ)
+    // Accordéons
     document.querySelector('.container').addEventListener('click', function(e) {
-        const target = e.target;
-        if (target.classList && target.classList.contains('accordion')) {
-            const panel = target.nextElementSibling;
+        if (e.target.classList.contains('accordion')) {
+            const panel = e.target.nextElementSibling;
             if (!panel) return;
             const isOpen = panel.style.display === 'block';
-            // fermer tous les panels si on veut comportement accordéon exclusif (optionnel) - ici on laisse ouvert/fermé indépendants
             panel.style.display = isOpen ? 'none' : 'block';
-            target.classList.toggle('active', !isOpen);
+            e.target.classList.toggle('active', !isOpen);
         }
     });
 
-    // Attacher handlers boutons
     btnCalc.addEventListener('click', calculer);
     btnReset.addEventListener('click', reinitialiser);
 
