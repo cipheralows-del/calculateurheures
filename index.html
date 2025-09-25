@@ -14,8 +14,8 @@
     b { color: #1a73e8; }
 
     .accordion { 
-        background-color: #000; 
-        color: #fff; 
+        background-color: #000;
+        color: #fff;
         cursor: pointer; 
         padding: 15px; 
         width: 100%; 
@@ -27,7 +27,7 @@
         transition: 0.2s; 
         margin-top: 20px; 
     }
-    .active, .accordion:hover { background-color: #222; } 
+    .active, .accordion:hover { background-color: #222; }
     .panel { 
         padding: 10px 15px; 
         display: none; 
@@ -37,7 +37,7 @@
         margin-top: 5px; 
         border-radius: 8px; 
         border: 1px solid #ccc; 
-        max-height: 300px; 
+        max-height: 300px;
     }
     .dates-list { font-size: 14px; line-height: 1.6; white-space: nowrap; }
     #menu-details { display: none; }
@@ -57,7 +57,6 @@
     <button id="btn-reset">Réinitialiser</button>
     <p id="resultat" aria-live="polite"></p>
 
-    <!-- Nouveau menu déroulant -->
     <div id="menu-details">
         <button class="accordion">Détails précis des dates</button>
         <div class="panel">
@@ -65,13 +64,16 @@
         </div>
     </div>
 
-    <!-- Menu informations mis à jour -->
     <button class="accordion">Informations sur le fonctionnement des cachets ActeursPros</button>
     <div class="panel">
         <p>
-        Les cachets ActeursPros ajoutés dans France Travail correspondent à <b>338 heures de cours (28 cachets)</b>. La suppression des cachets commence le <b>10 décembre 2025</b>, car France Travail calcule les heures à reculons à partir du <b>27 juin 2025</b>, dernier jour de cours de la 2ᵉ année.  
-        France Travail ne peut pas convertir plus de <b>338 heures de formation</b> en cachets.  
-        La suppression se fait ensuite progressivement à raison de <b>1 cachet tous les 3 jours</b>, chaque cachet correspondant à <b>12 heures</b> (en tenant compte qu’<b>1 jour d’ActeursPros en 2ᵉ année = 4h</b>). Ce processus continue jusqu’à ce que le nombre de cachets atteigne zéro.
+        Les cachets ActeursPros ajoutés dans France Travail correspondent à <b>338 heures de cours (28 cachets)</b>. 
+        La suppression des cachets commence le <b>6 janvier 2026</b>, car France Travail calcule les heures à reculons à partir du 
+        <b>27 juin 2025</b>, dernier jour de cours de la 2ᵉ année.<br><br>
+        France Travail ne peut pas convertir plus de <b>338 heures de formation</b> en cachets.<br><br>
+        La suppression se fait ensuite progressivement à raison de <b>1 cachet tous les 3 jours</b>, 
+        chaque cachet correspondant à <b>12 heures</b> (en tenant compte qu’<b>1 jour d’ActeursPros en 2ᵉ année = 4h</b>). 
+        Ce processus continue jusqu’à ce que le nombre de cachets atteigne zéro.
         </p>
     </div>
 </div>
@@ -81,7 +83,7 @@
     const HEURES_INITIALES = 338;
     const HEURES_PAR_CACHET = 12;
     const PERIODE_JOURS = 3;
-    const DATE_DEBUT_SUPPRESSION = new Date('2025-12-10');
+    const DATE_DEBUT_SUPPRESSION = new Date("2026-01-06"); // point de départ des suppressions
 
     const btnCalc = document.getElementById('btn-calcul');
     const btnReset = document.getElementById('btn-reset');
@@ -90,67 +92,89 @@
     const detailsDatesDiv = document.getElementById('detailsDates');
     const menuDetails = document.getElementById('menu-details');
 
-    function formatDate(d) { return d.toLocaleDateString('fr-FR'); }
+    function formatDate(d) {
+        return d.toLocaleDateString('fr-FR');
+    }
 
     function calculer() {
-        const dateDepart = new Date(inputDate.value);
         if (!inputDate.value) { alert("Veuillez entrer une date !"); return; }
+        const dateDepart = new Date(inputDate.value);
+        // normaliser heures pour éviter problème d'heure locale (mettre à midi)
+        dateDepart.setHours(12,0,0,0);
 
-        // Cas avant le 10 décembre 2025
+        // si la date saisie est avant la date de début des suppressions
         if (dateDepart < DATE_DEBUT_SUPPRESSION) {
             resultat.innerHTML = `Aucune perte de cachets, la suppression commence à partir du <b>${formatDate(DATE_DEBUT_SUPPRESSION)}</b>.`;
             detailsDatesDiv.innerHTML = '';
             menuDetails.style.display = 'block';
+            // ouvrir le panel détails pour visibilité
+            openDetailsPanel();
             return;
         }
 
-        // Nombre de jours écoulés depuis le 10 décembre
-        let joursDepasses = Math.floor((dateDepart - DATE_DEBUT_SUPPRESSION) / (1000*60*60*24));
-        if (joursDepasses < 0) joursDepasses = 0;
+        // calcul du nombre total de périodes (on arrondit pour inclure la fraction)
+        const periodesNecessaires = Math.ceil(HEURES_INITIALES / HEURES_PAR_CACHET); // ex: 29
+        const joursTotaux = periodesNecessaires * PERIODE_JOURS; // ex: 87
 
-        const periodesNecessaires = Math.ceil(HEURES_INITIALES / HEURES_PAR_CACHET);
-        const joursTotaux = periodesNecessaires * PERIODE_JOURS;
+        // jours écoulés depuis le début de la suppression jusqu'à la date saisie
+        const msParJour = 1000 * 60 * 60 * 24;
+        const joursEcoules = Math.floor((dateDepart - DATE_DEBUT_SUPPRESSION) / msParJour);
+        const suppressionsDeja = Math.floor(Math.max(0, joursEcoules) / PERIODE_JOURS);
 
-        // Heures et cachets restants à la date saisie
-        const suppressionsDepassees = Math.floor(joursDepasses / PERIODE_JOURS);
-        let heuresRestantes = HEURES_INITIALES - suppressionsDepassees * HEURES_PAR_CACHET;
+        // heures et cachets restant AU MOMENT de la date saisie (après suppression déjà effectuée)
+        let heuresRestantes = HEURES_INITIALES - (suppressionsDeja * HEURES_PAR_CACHET);
         if (heuresRestantes < 0) heuresRestantes = 0;
         let cachetsRestants = Math.floor(heuresRestantes / HEURES_PAR_CACHET);
 
-        const joursRestants = joursTotaux - suppressionsDepassees * PERIODE_JOURS;
+        // jours restants à partir de la date saisie avant d'atteindre 0h
+        const joursRestants = Math.max(0, joursTotaux - suppressionsDeja * PERIODE_JOURS);
+
+        // date finale (à partir de la date saisie)
         const dateFinale = new Date(dateDepart);
         dateFinale.setDate(dateFinale.getDate() + joursRestants);
 
+        // affichage principal
         resultat.innerHTML = `Nombre de jours avant 0h depuis la date saisie : <b>${joursRestants}</b> jours<br>
             Date à laquelle tu atteindras 0h : <b>${formatDate(dateFinale)}</b>`;
 
-        // Génération du tableau jour par jour
+        // génération du tableau jour par jour COMMENCANT À LA DATE SAISIE
         let html = '<table class="mini-table"><tbody>';
         let heuresCourantes = heuresRestantes;
         let cachetsCourants = cachetsRestants;
 
-        for (let i = 0; i < joursRestants; i++) {
-            const currentDate = new Date(dateDepart);
-            currentDate.setDate(currentDate.getDate() + i);
+        // Si tout est déjà supprimé avant la date saisie, on affiche une ligne 0 / 0
+        if (heuresCourantes === 0 && cachetsCourants === 0 && joursRestants === 0) {
+            html += `<tr><td class="date">${formatDate(dateDepart)}</td><td class="cachets">0 cachet</td><td class="heures">0h</td></tr>`;
+        } else {
+            for (let i = 0; i < joursRestants; i++) {
+                const currentDate = new Date(dateDepart);
+                currentDate.setDate(currentDate.getDate() + i);
 
-            if (i !== 0 && i % PERIODE_JOURS === 0 && cachetsCourants > 0) {
-                cachetsCourants -= 1;
-                heuresCourantes -= HEURES_PAR_CACHET;
-                if (heuresCourantes < 0) heuresCourantes = 0;
+                // appliquer la suppression tous les PERIODE_JOURS (sauf à l'index 0, qui représente l'état au jour saisi)
+                if (i !== 0 && i % PERIODE_JOURS === 0 && cachetsCourants > 0) {
+                    cachetsCourants -= 1;
+                    heuresCourantes -= HEURES_PAR_CACHET;
+                    if (heuresCourantes < 0) heuresCourantes = 0;
+                }
+
+                html += `<tr>
+                            <td class="date">${formatDate(currentDate)}</td>
+                            <td class="cachets">${cachetsCourants} cachet${cachetsCourants>1?'s':''}</td>
+                            <td class="heures">${heuresCourantes}h</td>
+                         </tr>`;
             }
-
-            html += `<tr>
-                        <td class="date">${formatDate(currentDate)}</td>
-                        <td class="cachets">${cachetsCourants} cachet${cachetsCourants>1?'s':''}</td>
-                        <td class="heures">${heuresCourantes}h</td>
-                     </tr>`;
         }
+
         html += '</tbody></table>';
 
         detailsDatesDiv.innerHTML = html;
         menuDetails.style.display = 'block';
+        openDetailsPanel();
+    }
 
+    function openDetailsPanel() {
         const detailsButton = menuDetails.querySelector('.accordion');
+        if (!detailsButton) return;
         const detailsPanel = detailsButton.nextElementSibling;
         if (detailsPanel) {
             detailsPanel.style.display = 'block';
@@ -169,7 +193,7 @@
         accs.forEach(a => a.classList.remove('active'));
     }
 
-    // Accordéons
+    // Accordéons (gestion d'ouverture/fermeture)
     document.querySelector('.container').addEventListener('click', function(e) {
         if (e.target.classList.contains('accordion')) {
             const panel = e.target.nextElementSibling;
